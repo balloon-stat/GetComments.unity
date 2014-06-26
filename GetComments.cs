@@ -22,6 +22,7 @@ public class GetComments : MonoBehaviour {
 
 	void Start() {
 		Debug.Log("start");
+		CommentClient.FromRes = 0;
 		live = new LiveComments();
 		live.numRoom = 2;
 	}

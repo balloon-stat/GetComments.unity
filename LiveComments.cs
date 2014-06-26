@@ -23,8 +23,6 @@ public class LiveComments {
 	public LiveComments() {
 		ServicePointManager.ServerCertificateValidationCallback = (a, b, c, d) => { return true; };
 
-		CommentClient.numRes = 0;
-
 		getCookieDone = new ManualResetEvent(false);
 		getCookieWorker = new BackgroundWorker();
 		getCookieWorker.DoWork += new DoWorkEventHandler(DoGetCookie);
@@ -263,7 +261,7 @@ class CommentClient : IDisposable {
 	string thread;
 	BackgroundWorker gWorker;
 
-	public static int numRes { get; set; }
+	public static int FromRes = 0;
 
 	public BackgroundWorker Worker {
 		get { return gWorker; }
@@ -307,7 +305,7 @@ class CommentClient : IDisposable {
 			var worker = sender as BackgroundWorker;
 			
 			Debug.Log("Sending request...");
-			send(string.Format("<thread thread=\"{0}\" version=\"20061206\" res_from=\"{1}\"/>\0", thread, numRes));
+			send(string.Format("<thread thread=\"{0}\" version=\"20061206\" res_from=\"{1}\"/>\0", thread, FromRes));
 			
 			Debug.Log("BeginReceive...");
 			sock.BeginReceive( state.buffer, 0, StateObject.BufferSize, 0,
