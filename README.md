@@ -11,13 +11,13 @@ GetComments.csをサンプルとして参考にして使用してください。
 あるいはニコニコのクッキー情報が書かれた cookie.dat  
 が必要です。
 
-=== 設定ファイルのフォーマット
+## 設定ファイルのフォーマット
 
-==== account.info
+### account.info
 
 1行目　メールアドレス  
 2行目　パスワード  
 
-==== cookie.dat
+### cookie.dat
 
 user_session の値
