@@ -170,11 +170,10 @@ static class NicoLiveAPI {
 			break;
 		}
 
-		while (numRoom > 0) {
-			var inf = calcInfo(arena, numRoom - 1);
-			var client = new CommentClient(inf[0], inf[1], inf[2]);
+		for (var i = 0; i < numRoom; i++) {
+			var inf = calcInfo(arena, i);
+			var client = new CommentClient(inf[0], inf[1], inf[2], i);
 			client.StartRecive();
-			numRoom--;
 		}
 	}
 
@@ -185,21 +184,25 @@ static class NicoLiveAPI {
 		int ad = addr[5] - '0';
 		int po = int.Parse(port);
 		int th = int.Parse(thread);
-		if (delta > 0 && po == 2814) {
-			po = 2805 + delta - 1;
+		if (delta > 0 && po + delta > 2814) {
+			po = 2805 + po + delta - 2814 - 1;
 			if (ad == 4)
 				ad = 1;
 			else
 				ad++;
 		}
-		else if (delta < 0 && po == 2805) {
-			po = 2814 + delta + 1;
+		else if (delta < 0 && po + delta < 2805) {
+			po = 2814 + po + delta - 2805 + 1;
 			if (ad == 1)
 				ad = 4;
 			else
 				ad--;
 		}
-		po += delta;
+		else if (po > 2814 || po < 2805)
+			Debug.Log("unexpected port is used");
+		else
+			po += delta;
+
 		th += delta;
 		addr = addr.Substring(0, 5) + (char)(ad + '0') + addr.Substring(6);
 		return new string[] { addr, po.ToString(), th.ToString() };
@@ -259,6 +262,7 @@ class CommentClient : IDisposable {
 	StateObject state;
 	Socket sock;
 	string thread;
+	string roomLabel;
 	BackgroundWorker gWorker;
 
 	public static int FromRes = 0;
@@ -272,9 +276,10 @@ class CommentClient : IDisposable {
 		sock.Disconnect(false);
 	}
 	
-	public CommentClient(string addr, string port, string thread) {
+	public CommentClient(string addr, string port, string thread, int roomIx) {
 		try {
 			this.thread = thread;
+			this.roomLabel = toRoomLabel(roomIx);
 			state = new StateObject();
 			
 			var hostaddr = Dns.GetHostEntry(addr).AddressList[0];
@@ -289,7 +294,17 @@ class CommentClient : IDisposable {
 			Debug.Log(e.ToString());
 		}
 	}
-	
+
+	string toRoomLabel(int roomIx) {
+		switch (roomIx) {
+		case 0: return "アリーナ";
+		case 1: return "立ち見A";
+		case 2: return "立ち見B";
+		case 3: return "立ち見C";
+		default: return "error";
+		}
+	}
+
 	public void StartRecive() {
 		gWorker = new BackgroundWorker();
 		gWorker.DoWork += new DoWorkEventHandler(DoReceive);
@@ -391,7 +406,7 @@ class CommentClient : IDisposable {
 		else
 			prem = premattr.Value;
 		
-		StateObject.Res.Enqueue(new string[]{chat, no, prem, id});
+		StateObject.Res.Enqueue(new string[]{chat, no, prem, id, roomLabel});
 		
 		if (chat == "/disconnect" && prem == "3")
 			AllDone = true;

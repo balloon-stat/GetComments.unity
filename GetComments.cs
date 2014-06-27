@@ -15,7 +15,7 @@ public class GetComments : MonoBehaviour {
 			ix = ix != -1 ? ix : liveURL.Length;
 			liveID = liveURL.Substring(0, ix)
 					.Substring(url.Length);
-			Debug.Log("listen: " + liveID);
+			Debug.Log("view: " + liveID);
 			live.Run(liveID);
 		}
 	}
@@ -27,13 +27,13 @@ public class GetComments : MonoBehaviour {
 		live.numRoom = 2;
 	}
 
-	// comm: コメント内容, no, prem, id
+	// comm: コメント内容, no, prem, id, room_label
 	void Update() {
 		if (live == null)
 			return;
 		var comm = live.GetComment;
 		if (comm != null)
-			Debug.Log(comm[0]);
+			Debug.Log(comm[4] + ": " + comm[0]);
 	}
 }
 
