@@ -4,20 +4,30 @@ GetComments.unity
 Asset to get NicoLive comments for Unity  
 ニコニコ生放送のコメントを取得します。
 
-GetComments.csをサンプルとして参考にして使用してください。
+GetComments.csを参考に使用してください。
 
-動かすためには、プロジェクトのルートディレクトリに  
-ニコニコへログインするための情報が書かれた account.info  
-あるいはニコニコのクッキー情報が書かれた cookie.dat  
-が必要です。
+CommentClient.FromRes は既に投稿されたコメントを  
+さかのぼっていくつまで取得するか設定する値です。
+live.numRoom はアリーナや立ち見などの部屋の数を  
+設定する値です。
 
-## 設定ファイルのフォーマット
 
-### account.info
+### 設定
 
-1行目　メールアドレス  
-2行目　パスワード  
+プロジェクトのルートディレクトリに  
 
-### cookie.dat
+＊ account.info  
+＊ cookie.dat  
 
-user_session の値
+のどちらかを用意してください。
+
+#### account.info
+
+1行目　mail address  
+2行目　password  
+
+ニコニコへログインするための情報を上記のフォーマットで書きます。
+
+#### cookie.dat
+
+user_session の値を書きます。
