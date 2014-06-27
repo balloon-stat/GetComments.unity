@@ -6,10 +6,8 @@ Asset to get NicoLive comments for Unity
 
 GetComments.csを参考に使用してください。
 
-CommentClient.FromRes は既に投稿されたコメントを  
-さかのぼっていくつまで取得するか設定する値です。  
-live.numRoom はアリーナや立ち見などの部屋の数を  
-設定する値です。
+CommentClient.FromRes は既に投稿されたコメントを、さかのぼっていくつまで取得するか設定する値です。  
+live.numRoom はアリーナや立ち見などの部屋の数を設定する値です。
 
 
 ### 設定
