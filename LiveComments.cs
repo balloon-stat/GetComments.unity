@@ -14,27 +14,24 @@ using System.ComponentModel;
 
 public class LiveComments {
 	
-	BackgroundWorker getCookieWorker;
-	BackgroundWorker getCommentWorker;
-	ManualResetEvent getCookieDone;
-	CookieContainer cc;
 	public int numRoom = 2;
+	CookieContainer cc;
+	ManualResetEvent getCookieDone;
+	List<CommentClient> clients;
 	
 	public LiveComments() {
 		ServicePointManager.ServerCertificateValidationCallback = (a, b, c, d) => { return true; };
 
 		getCookieDone = new ManualResetEvent(false);
-		getCookieWorker = new BackgroundWorker();
-		getCookieWorker.DoWork += new DoWorkEventHandler(DoGetCookie);
-		
-		getCommentWorker = new BackgroundWorker();
-		getCommentWorker.DoWork += new DoWorkEventHandler(DoGetComment);
-
-		getCookieWorker.RunWorkerAsync();
+		var worker = new BackgroundWorker();
+		worker.DoWork += new DoWorkEventHandler(DoGetCookie);		
+		worker.RunWorkerAsync();
 	}
 
 	public void Run(string liveID) {
-		getCommentWorker.RunWorkerAsync(liveID);
+		var worker = new BackgroundWorker();
+		worker.DoWork += new DoWorkEventHandler(DoGetComment);
+		worker.RunWorkerAsync(liveID);
 	}
 	
 	public void DoGetCookie(object sender, DoWorkEventArgs ev) {
@@ -49,7 +46,7 @@ public class LiveComments {
 	CookieContainer login() {
 		var file = "account.info";
 		if (!File.Exists(file)) {
-			Debug.Log("can not found 'account.info' file.");
+			Debug.Log("Can not found 'account.info' file.");
 			// throw new Exception("can not founf file");
 			return new CookieContainer();
 		}
@@ -87,7 +84,7 @@ public class LiveComments {
 		var notifybox = NicoLiveAPI.get(url, ref ccont);
 		var ret = notifybox.Length > 124;
 
-		Debug.Log("login: " + ret);
+		Debug.Log("Login: " + ret);
 		return ret;
 	}
 	
@@ -99,16 +96,21 @@ public class LiveComments {
 			Debug.Log("PlayerStatus is error on: " + info["code"]);
 			return;
 		}
-		NicoLiveAPI.GetComments(info, numRoom);
+		clients = NicoLiveAPI.GetComments(info, numRoom);
 	}
 	
-	public string[] GetComment {
+	public string[] Res {
 		get {
 			var res = StateObject.Res;
 			if (res.Count == 0)
 				return null;
 			return res.Dequeue();
 		}
+	}
+
+	public void DisConnect() {
+		if (clients != null)
+			clients.ForEach(x=>x.Disconnect());
 	}
 }
 
@@ -122,7 +124,7 @@ static class NicoLiveAPI {
 		param.Add("password", account[1]);
 		
 		post(url, ref cc, param);
-		Debug.Log("login is finished");
+		Debug.Log("Login is finished");
 		return cc;
 	}
 	
@@ -147,10 +149,10 @@ static class NicoLiveAPI {
 		return ret;
 	}
 	
-	public static void GetComments(Dictionary<string, string> info, int numRoom) {
+	public static List<CommentClient> GetComments(Dictionary<string, string> info, int numRoom) {
 		if (numRoom < 0 && numRoom > 4) {
 			Debug.Log("numRoom is out of range");
-			return;
+			return null;
 		}
 		var addr = info["addr"];
 		var port = info["port"];
@@ -165,16 +167,19 @@ static class NicoLiveAPI {
 			case "立ち見A列": arena = calcInfo(arena, -1); break;
 			case "立ち見B列": arena = calcInfo(arena, -2); break;
 			case "立ち見C列": arena = calcInfo(arena, -3); break;
-		default:
-			Debug.Log("not follow");
-			break;
+			default:
+				Debug.Log("Response is not followed room_label");
+				break;
 		}
 
+		var ret = new List<CommentClient>();
 		for (var i = 0; i < numRoom; i++) {
 			var inf = calcInfo(arena, i);
 			var client = new CommentClient(inf[0], inf[1], inf[2], i);
 			client.StartRecive();
+			ret.Add(client);
 		}
+		return ret;
 	}
 
 	static string[] calcInfo(string[] info, int delta) {
@@ -199,7 +204,7 @@ static class NicoLiveAPI {
 				ad--;
 		}
 		else if (po > 2814 || po < 2805)
-			Debug.Log("unexpected port is used");
+			Debug.Log("Unexpected port is used");
 		else
 			po += delta;
 
@@ -214,7 +219,7 @@ static class NicoLiveAPI {
 		
 		string ret;
 		using(var res = req.GetResponse())
-			using(var resStream = res.GetResponseStream())
+		using(var resStream = res.GetResponseStream())
 		using(var sr = new StreamReader(resStream, Encoding.GetEncoding("UTF-8"))) {
 			ret = sr.ReadToEnd();
 		}
@@ -223,7 +228,7 @@ static class NicoLiveAPI {
 	
 	public static string post(string url, ref CookieContainer cc, Dictionary<string, string> param) {
 		var postData = string.Join("&",
-		                           param.Select(x=>x.Key + "=" + System.Uri.EscapeUriString(x.Value)).ToArray());
+			param.Select(x=>x.Key + "=" + System.Uri.EscapeUriString(x.Value)).ToArray());
 		
 		byte[] postDataBytes = Encoding.ASCII.GetBytes(postData);
 		
@@ -239,7 +244,7 @@ static class NicoLiveAPI {
 		
 		string ret;
 		using(var res = req.GetResponse())
-			using(var resStream = res.GetResponseStream())
+		using(var resStream = res.GetResponseStream())
 		using(var sr = new StreamReader(resStream, Encoding.GetEncoding("UTF-8"))) {
 			ret = sr.ReadToEnd();
 		}
@@ -255,10 +260,9 @@ class StateObject {
 	public static Queue<string[]> Res = new Queue<string[]>();
 }
 
-class CommentClient : IDisposable {
+class CommentClient {
 
-	public bool AllDone = false;
-	public bool IsExistRev = false;
+	bool allDone = false;
 	StateObject state;
 	Socket sock;
 	string thread;
@@ -271,8 +275,8 @@ class CommentClient : IDisposable {
 		get { return gWorker; }
 	}
 
-	public void Dispose() {
-		AllDone = true;
+	public void Disconnect() {
+		allDone = true;
 		sock.Disconnect(false);
 	}
 	
@@ -301,7 +305,7 @@ class CommentClient : IDisposable {
 		case 1: return "立ち見A";
 		case 2: return "立ち見B";
 		case 3: return "立ち見C";
-		default: return "error";
+		default: return "Error";
 		}
 	}
 
@@ -312,11 +316,8 @@ class CommentClient : IDisposable {
 	}
 	
 	void DoReceive(object sender, DoWorkEventArgs ev) {
-		
 		try {
-			AllDone = false;
-			IsExistRev = false;
-
+			allDone = false;
 			var worker = sender as BackgroundWorker;
 			
 			Debug.Log("Sending request...");
@@ -329,7 +330,8 @@ class CommentClient : IDisposable {
 			while (true) {
 				send("\0");
 				while (count < 600) {
-					if (AllDone || worker.CancellationPending)
+					allDone = allDone || worker.CancellationPending;
+					if (allDone)
 						return;
 					Thread.Sleep(1000);
 					count++;
@@ -347,20 +349,17 @@ class CommentClient : IDisposable {
 		var handler = state.workSocket;
 		
 		var bytesRead = handler.EndReceive(ar);
-		
 		if (bytesRead > 0) {
-			IsExistRev = true;
 			var content = Encoding.UTF8.GetString(state.buffer, 0, bytesRead);
 			state.content = resProc(content, state.content);
 		}
-		if (!AllDone) {
+		if (!allDone) {
 			handler.BeginReceive(state.buffer, 0, StateObject.BufferSize, 0,
 			                     new AsyncCallback(ReadCallback), state);
 		}
 	}
 	
 	string resProc(string content, string prev) {
-		
 		string xdocs;
 		if (content.StartsWith("<chat")) {
 			xdocs = content;
@@ -371,8 +370,7 @@ class CommentClient : IDisposable {
 		
 		foreach (string line in xdocs.Split('\0')) {
 			if (line.StartsWith("<thread"))	{
-				// var th = XElement.Parse(line);
-				
+				// var th = XElement.Parse(line);			
 				// ticket = th.Attribute("ticket").Value;
 				// srvTime = th.Attribute("server_time").Value;
 				// DateTimeStart = DateTime.Now;
@@ -392,8 +390,7 @@ class CommentClient : IDisposable {
 		return "";
 	}
 	
-	void chatProc(string chat_el)
-	{
+	void chatProc(string chat_el) {
 		var xelem = XElement.Parse(chat_el);
 		var chat = xelem.Value;
 		var id = xelem.Attribute("user_id").Value;
@@ -409,7 +406,7 @@ class CommentClient : IDisposable {
 		StateObject.Res.Enqueue(new string[]{chat, no, prem, id, roomLabel});
 		
 		if (chat == "/disconnect" && prem == "3")
-			AllDone = true;
+			allDone = true;
 	}
 	
 	void send(string data) {
