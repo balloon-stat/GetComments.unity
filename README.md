@@ -16,8 +16,8 @@ live.numRoom はアリーナや立ち見などの部屋の数を
 
 プロジェクトのルートディレクトリに  
 
-＊ account.info  
-＊ cookie.dat  
+* account.info  
+* cookie.dat  
 
 のどちらかを用意してください。
 
