@@ -7,7 +7,7 @@ public class GetComments : MonoBehaviour {
 	LiveComments live = null;
 
 	void OnGUI() {
-		GUI.Label(new Rect(15, 5, 100, 30), "Input URL");
+		GUI.Label(new Rect(15, 5, 100, 30), "URL");
 		liveURL = GUI.TextField(new Rect(10, 30, 300, 25), liveURL);
 		if (GUI.Button(new Rect(315, 30, 50, 25), "接続")) {
 			var url = "http://live.nicovideo.jp/watch/";
@@ -28,10 +28,10 @@ public class GetComments : MonoBehaviour {
 		Debug.Log("Start");
 		live = new LiveComments();
 		live.numRoom = 2;
-		CommentClient.FromRes = 0;
+		CommentClient.FromRes = -10;
 	}
 
-	// res: コメント内容, no, prem, id, room_label
+	// res: comment, no, prem, id, room_label
 	void Update() {
 		var res = live.Res;
 		if (res != null)

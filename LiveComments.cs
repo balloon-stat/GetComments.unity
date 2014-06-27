@@ -279,13 +279,8 @@ class CommentClient {
 	Socket sock;
 	string thread;
 	string roomLabel;
-	BackgroundWorker gWorker;
 
 	public static int FromRes = 0;
-
-	public BackgroundWorker Worker {
-		get { return gWorker; }
-	}
 
 	public void Disconnect() {
 		allDone = true;
@@ -322,27 +317,21 @@ class CommentClient {
 	}
 
 	public void StartRecive() {
-		gWorker = new BackgroundWorker();
-		gWorker.DoWork += new DoWorkEventHandler(DoReceive);
-		gWorker.RunWorkerAsync();
+		var worker = new BackgroundWorker();
+		worker.DoWork += new DoWorkEventHandler(DoReceive);
+		worker.RunWorkerAsync();
 	}
 	
 	void DoReceive(object sender, DoWorkEventArgs ev) {
 		try {
 			allDone = false;
-			var worker = sender as BackgroundWorker;
-			
-			Debug.Log("Sending request...");
 			send(string.Format("<thread thread=\"{0}\" version=\"20061206\" res_from=\"{1}\"/>\0", thread, FromRes));
-			
-			Debug.Log("BeginReceive...");
 			sock.BeginReceive( state.buffer, 0, StateObject.BufferSize, 0,
 			                  new AsyncCallback(ReadCallback), state);
 			var count = 0;
 			while (true) {
 				send("\0");
 				while (count < 600) {
-					allDone = allDone || worker.CancellationPending;
 					if (allDone)
 						return;
 					Thread.Sleep(1000);
