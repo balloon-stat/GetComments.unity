@@ -14,7 +14,7 @@ public class GetComments : MonoBehaviour {
 			var ix = liveURL.IndexOf("?");
 			ix = ix != -1 ? ix : liveURL.Length;
 			liveID = liveURL.Substring(0, ix)
-					.Substring(url.Length);
+					.Replace(url, "");
 			Debug.Log("View: " + liveID);
 			live.Run(liveID);
 		}

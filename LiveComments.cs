@@ -15,7 +15,7 @@ using System.ComponentModel;
 public class LiveComments {
 	
 	public int numRoom = 2;
-	CookieContainer cc;
+	CookieContainer ccNico;
 	ManualResetEvent getCookieDone;
 	List<CommentClient> clients;
 	
@@ -35,53 +35,61 @@ public class LiveComments {
 	}
 	
 	public void DoGetCookie(object sender, DoWorkEventArgs ev) {
-		var file = "cookie.dat";
-		if (File.Exists(file))
-			cc = readCookie(file);
-		if (!isLogin(cc))
-			cc = login();
-		getCookieDone.Set();
+		try {
+			var ckfile = "cookie.dat";
+			var acfile = "account.info";
+			if (File.Exists(ckfile))
+				ccNico = readCookie(ckfile);
+			if (!isLogin(ccNico)) {
+				if (!File.Exists(acfile)) {
+					Debug.Log("Can not found 'account.info'");
+					return;
+				}
+				Debug.Log("Try to login...");
+				ccNico = nicoLogin(acfile);
+				if (!isLogin(ccNico)) {
+					ccNico = null;
+					return;
+				}
+ 			}
+			getCookieDone.Set();
+		}
+		catch (Exception e) {
+			Debug.Log(e.ToString());
+		}
 	}
 
-	CookieContainer login() {
-		var file = "account.info";
-		if (!File.Exists(file)) {
-			Debug.Log("Can not found 'account.info' file.");
-			// throw new Exception("can not founf file");
-			return new CookieContainer();
-		}
-		var account = File.ReadAllLines(file);
-		var ccont = NicoLiveAPI.Login(account);
-		writeCookie(ccont);
-		return ccont;
+	CookieContainer nicoLogin(string file) {
+		var accInfos = File.ReadAllLines(file);
+		if (accInfos.Length < 2)
+			throw new Exception(file + " is broken");
+		var cc = NicoLiveAPI.Login(accInfos);
+		writeCookie(cc);
+		return cc;
 	}
 
 	CookieContainer readCookie(string file) {
 		var container = new CookieContainer();
 		var data = File.ReadAllText(file).Trim();
-		if (data == "") {
-			Debug.Log(file + " is empty");
-			return container;
-		}
 		var cookie = new Cookie("user_session", data, "/", ".nicovideo.jp");
 		container.Add(cookie);
 		return container;
 	}
 
-	void writeCookie(CookieContainer ccont) {
+	void writeCookie(CookieContainer cc) {
 		var file = "cookie.dat";
 		var uri = new Uri("http://live.nicovideo.jp");
 		string data = null;
-		foreach(Cookie cookie in ccont.GetCookies(uri)) {
+		foreach(Cookie cookie in cc.GetCookies(uri)) {
 			if (cookie.Name == "user_session")
 			data = cookie.Value;
 		}
 		File.WriteAllText(file, data);
 	}
 	
-	bool isLogin(CookieContainer ccont) {
+	bool isLogin(CookieContainer cc) {
 		var url = "http://live.nicovideo.jp/notifybox";
-		var notifybox = NicoLiveAPI.get(url, ref ccont);
+		var notifybox = NicoLiveAPI.get(url, ref cc);
 		var ret = notifybox.Length > 124;
 
 		Debug.Log("Login: " + ret);
@@ -89,14 +97,19 @@ public class LiveComments {
 	}
 	
 	public void DoGetComment(object sender, DoWorkEventArgs ev) {
-		getCookieDone.WaitOne();
-		var liveID = (string)ev.Argument;
-		var info = NicoLiveAPI.GetPlayerStatus(cc, liveID);
-		if (info.Count == 1) {
-			Debug.Log("PlayerStatus is error on: " + info["code"]);
-			return;
+		try {
+			if (ccNico == null) {
+				Debug.Log("Cookie is nothing");
+				return;
+			}
+			getCookieDone.WaitOne();
+			var liveID = (string)ev.Argument;
+			var info = NicoLiveAPI.GetPlayerStatus(ccNico, liveID);
+			clients = NicoLiveAPI.GetComments(info, numRoom);
 		}
-		clients = NicoLiveAPI.GetComments(info, numRoom);
+		catch (Exception e) {
+			Debug.Log(e.ToString());
+		}
 	}
 	
 	public string[] Res {
@@ -124,7 +137,6 @@ static class NicoLiveAPI {
 		param.Add("password", account[1]);
 		
 		post(url, ref cc, param);
-		Debug.Log("Login is finished");
 		return cc;
 	}
 	
@@ -134,10 +146,9 @@ static class NicoLiveAPI {
 		var ret = new Dictionary<string, string>();
 
 		var status = xdoc.Element("getplayerstatus").Attribute("status").Value;
-		Debug.Log("status: " + status);
 		if (status != "ok") {
-			ret.Add("code", xdoc.Descendants("code").Single().Value);
-			return ret;
+			var code = xdoc.Descendants("code").Single().Value;
+			throw new Exception("PlayerStatus is error on: " + code);
 		}
 		var ms = xdoc.Descendants("ms").Single();
 		ret.Add("base_time", xdoc.Descendants("base_time").Single().Value);
@@ -150,10 +161,9 @@ static class NicoLiveAPI {
 	}
 	
 	public static List<CommentClient> GetComments(Dictionary<string, string> info, int numRoom) {
-		if (numRoom < 0 && numRoom > 4) {
-			Debug.Log("numRoom is out of range");
-			return null;
-		}
+		if (numRoom < 0 && numRoom > 4) 
+			throw new Exception("numRoom is out of range");
+
 		var addr = info["addr"];
 		var port = info["port"];
 		var thread = info["thread"];
@@ -168,8 +178,7 @@ static class NicoLiveAPI {
 			case "立ち見B列": arena = calcInfo(arena, -2); break;
 			case "立ち見C列": arena = calcInfo(arena, -3); break;
 			default:
-				Debug.Log("Response is not followed room_label");
-				break;
+				throw new Exception("Response is not followed room_label");
 		}
 
 		var ret = new List<CommentClient>();
@@ -204,7 +213,7 @@ static class NicoLiveAPI {
 				ad--;
 		}
 		else if (po > 2814 || po < 2805)
-			Debug.Log("Unexpected port is used");
+			throw new Exception("Unexpected port is used");
 		else
 			po += delta;
 
