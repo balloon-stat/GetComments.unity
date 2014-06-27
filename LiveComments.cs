@@ -40,14 +40,16 @@ public class LiveComments {
 			var acfile = "account.info";
 			if (File.Exists(ckfile))
 				ccNico = readCookie(ckfile);
-			if (!isLogin(ccNico)) {
+			else
+				Debug.Log("Can not found 'cookie.dat'");
+			if (!NicoLiveAPI.IsLogin(ccNico)) {
 				if (!File.Exists(acfile)) {
 					Debug.Log("Can not found 'account.info'");
 					return;
 				}
 				Debug.Log("Try to login...");
 				ccNico = nicoLogin(acfile);
-				if (!isLogin(ccNico)) {
+				if (!NicoLiveAPI.IsLogin(ccNico)) {
 					ccNico = null;
 					return;
 				}
@@ -85,15 +87,6 @@ public class LiveComments {
 			data = cookie.Value;
 		}
 		File.WriteAllText(file, data);
-	}
-	
-	bool isLogin(CookieContainer cc) {
-		var url = "http://live.nicovideo.jp/notifybox";
-		var notifybox = NicoLiveAPI.get(url, ref cc);
-		var ret = notifybox.Length > 124;
-
-		Debug.Log("Login: " + ret);
-		return ret;
 	}
 	
 	public void DoGetComment(object sender, DoWorkEventArgs ev) {
@@ -139,7 +132,17 @@ static class NicoLiveAPI {
 		post(url, ref cc, param);
 		return cc;
 	}
+
 	
+	public static bool IsLogin(CookieContainer cc) {
+		var url = "http://live.nicovideo.jp/notifybox";
+		var notifybox = get(url, ref cc);
+		var ret = notifybox.Length > 124;
+		
+		Debug.Log("Login: " + ret);
+		return ret;
+	}
+
 	public static Dictionary<string, string> GetPlayerStatus(CookieContainer cc, string liveID) {
 		var url = "http://live.nicovideo.jp/api/getplayerstatus?v=" + liveID;
 		var xdoc = XDocument.Parse(get(url, ref cc));
@@ -222,7 +225,7 @@ static class NicoLiveAPI {
 		return new string[] { addr, po.ToString(), th.ToString() };
 	}
 	
-	public static string get(string url, ref CookieContainer cc) {
+	static string get(string url, ref CookieContainer cc) {
 		var req = (HttpWebRequest)WebRequest.Create(url);
 		req.CookieContainer = cc;
 		
@@ -235,7 +238,7 @@ static class NicoLiveAPI {
 		return ret;
 	}
 	
-	public static string post(string url, ref CookieContainer cc, Dictionary<string, string> param) {
+	static string post(string url, ref CookieContainer cc, Dictionary<string, string> param) {
 		var postData = string.Join("&",
 			param.Select(x=>x.Key + "=" + System.Uri.EscapeUriString(x.Value)).ToArray());
 		
