@@ -14,7 +14,7 @@ using System.ComponentModel;
 
 public class LiveComments {
 	
-	public int numRoom = 2;
+	public int NumRoom = 2;
 	CookieContainer ccNico;
 	ManualResetEvent getCookieDone;
 	List<CommentClient> clients;
@@ -98,7 +98,7 @@ public class LiveComments {
 			getCookieDone.WaitOne();
 			var liveID = (string)ev.Argument;
 			var info = NicoLiveAPI.GetPlayerStatus(ccNico, liveID);
-			clients = NicoLiveAPI.GetComments(info, numRoom);
+			clients = NicoLiveAPI.GetComments(info, NumRoom);
 		}
 		catch (Exception e) {
 			Debug.Log(e.ToString());

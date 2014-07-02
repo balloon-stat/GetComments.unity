@@ -6,6 +6,9 @@ public class GetComments : MonoBehaviour {
 	string liveURL = "";
 	LiveComments live = null;
 
+	public int NumRoom = 2;
+	public int FromRes = -10;
+
 	void OnGUI() {
 		GUI.Label(new Rect(15, 5, 100, 30), "URL");
 		liveURL = GUI.TextField(new Rect(10, 30, 300, 25), liveURL);
@@ -27,8 +30,8 @@ public class GetComments : MonoBehaviour {
 	void Start() {
 		Debug.Log("Start");
 		live = new LiveComments();
-		live.numRoom = 2;
-		CommentClient.FromRes = -10;
+		live.NumRoom = NumRoom;
+		CommentClient.FromRes = FromRes;
 	}
 
 	// res: comment, no, prem, id, room_label
